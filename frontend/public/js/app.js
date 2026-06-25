@@ -1,78 +1,160 @@
 const API_URL = '/api';
 let currentFilter = 'todas';
+let deleteTargetId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadTasks();
 
-  document.getElementById('taskForm').addEventListener('submit', handleCreateTask);
-
-  document.querySelectorAll('.btn-filter').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentFilter = btn.dataset.filter;
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+      currentFilter = item.dataset.filter;
       loadTasks();
     });
   });
+
+  document.getElementById('btnNewTask').addEventListener('click', () => openModal());
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('btnCancel').addEventListener('click', closeModal);
+  document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.getElementById('taskForm').addEventListener('submit', handleCreateTask);
+
+  document.getElementById('confirmNo').addEventListener('click', closeConfirm);
+  document.getElementById('confirmOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeConfirm();
+  });
+  document.getElementById('confirmYes').addEventListener('click', () => {
+    if (deleteTargetId !== null) {
+      executeDelete(deleteTargetId);
+      deleteTargetId = null;
+    }
+    closeConfirm();
+  });
 });
+
+function openModal(task = null) {
+  const overlay = document.getElementById('modalOverlay');
+  const title = document.getElementById('modalTitle');
+  const submit = document.getElementById('btnSubmit');
+  const form = document.getElementById('taskForm');
+
+  form.reset();
+  form.dataset.editId = '';
+
+  if (task) {
+    title.textContent = 'Editar Tarefa';
+    submit.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.66V20a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg> Salvar';
+    document.getElementById('title').value = task.title;
+    document.getElementById('description').value = task.description || '';
+    form.dataset.editId = task.id;
+  } else {
+    title.textContent = 'Nova Tarefa';
+    submit.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Criar Tarefa';
+  }
+
+  overlay.classList.add('open');
+  document.getElementById('title').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+}
 
 async function loadTasks() {
   const list = document.getElementById('tasksList');
-  list.innerHTML = '<p class="loading">Carregando tarefas...</p>';
+  const skeleton = document.getElementById('loadingSkeleton');
+  skeleton.classList.remove('hidden');
+  list.innerHTML = '';
 
   try {
     const res = await fetch(`${API_URL}/tasks`);
-    if (!res.ok) throw new Error('Erro ao carregar tarefas');
+    if (!res.ok) throw new Error('Erro ao carregar');
     let tasks = await res.json();
 
     if (currentFilter !== 'todas') {
       tasks = tasks.filter(t => t.status === currentFilter);
     }
 
+    updateStats(tasks);
+    updateNavCounts(tasks);
     renderTasks(tasks);
   } catch (err) {
-    list.innerHTML = `<p class="empty">Erro ao carregar tarefas: ${err.message}</p>`;
+    list.innerHTML = `<div class="empty-state"><h3>Erro ao carregar</h3><p>${err.message}</p></div>`;
+  } finally {
+    skeleton.classList.add('hidden');
   }
+}
+
+function updateStats(tasks) {
+  const all = tasks;
+  const pendentes = all.filter(t => t.status === 'pendente');
+  const andamento = all.filter(t => t.status === 'em_andamento');
+  const concluidas = all.filter(t => t.status === 'concluida');
+
+  document.getElementById('statTotal').textContent = all.length;
+  document.getElementById('statPendentes').textContent = pendentes.length;
+  document.getElementById('statAndamento').textContent = andamento.length;
+  document.getElementById('statConcluidas').textContent = concluidas.length;
+}
+
+function updateNavCounts(currentTasks) {
+  const all = currentTasks;
+  document.getElementById('countTodas').textContent = all.length;
+  document.getElementById('countPendente').textContent = all.filter(t => t.status === 'pendente').length;
+  document.getElementById('countAndamento').textContent = all.filter(t => t.status === 'em_andamento').length;
+  document.getElementById('countConcluida').textContent = all.filter(t => t.status === 'concluida').length;
 }
 
 function renderTasks(tasks) {
   const list = document.getElementById('tasksList');
 
   if (tasks.length === 0) {
-    list.innerHTML = '<p class="empty">Nenhuma tarefa encontrada</p>';
+    const messages = {
+      todas: { title: 'Nenhuma tarefa ainda', desc: 'Crie sua primeira tarefa!' },
+      pendente: { title: 'Nenhuma tarefa pendente', desc: 'Todas as tarefas estão em andamento ou concluídas.' },
+      em_andamento: { title: 'Nenhuma tarefa em andamento', desc: 'Inicie uma tarefa pendente.' },
+      concluida: { title: 'Nenhuma tarefa concluída', desc: 'Finalize alguma tarefa para vê-la aqui.' },
+    };
+    const msg = messages[currentFilter] || messages.todas;
+    list.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+          <rect x="9" y="3" width="6" height="4" rx="1"/>
+        </svg>
+        <h3>${msg.title}</h3>
+        <p>${msg.desc}</p>
+      </div>`;
     return;
   }
 
   list.innerHTML = tasks.map(task => `
-    <div class="task-card" data-id="${task.id}">
-      <div class="task-header">
-        <span class="task-title ${task.status === 'concluida' ? 'completed' : ''}">
-          ${escapeHtml(task.title)}
-        </span>
-        <span class="status-badge status-${task.status}">
-          ${getStatusLabel(task.status)}
-        </span>
+    <div class="task-card ${task.status === 'concluida' ? 'concluida' : ''}" style="animation-delay: ${Math.random() * 0.1}s">
+      <div class="task-top">
+        <div class="task-info">
+          <div class="task-title ${task.status === 'concluida' ? 'completed' : ''}">${escapeHtml(task.title)}</div>
+          ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
+        </div>
+        <span class="status-badge status-${task.status}">${getStatusLabel(task.status)}</span>
       </div>
-      ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
       <div class="task-actions">
         ${task.status !== 'concluida' ? `
-          <button class="btn btn-success btn-sm" onclick="updateStatus(${task.id}, 'concluida')">
-            Concluir
-          </button>
+          <button class="btn btn-success btn-sm" onclick="updateStatus(${task.id}, 'concluida')">Concluir</button>
         ` : ''}
         ${task.status === 'pendente' ? `
-          <button class="btn btn-warning btn-sm" onclick="updateStatus(${task.id}, 'em_andamento')">
-            Iniciar
-          </button>
+          <button class="btn btn-warning btn-sm" onclick="updateStatus(${task.id}, 'em_andamento')">Iniciar</button>
         ` : ''}
         ${task.status === 'em_andamento' ? `
-          <button class="btn btn-warning btn-sm" onclick="updateStatus(${task.id}, 'pendente')">
-            Pausar
-          </button>
+          <button class="btn btn-warning btn-sm" onclick="updateStatus(${task.id}, 'pendente')">Pausar</button>
         ` : ''}
-        <button class="btn btn-danger btn-sm" onclick="deleteTask(${task.id})">
-          Excluir
-        </button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDelete(${task.id})">Excluir</button>
       </div>
     </div>
   `).join('');
@@ -83,58 +165,68 @@ async function handleCreateTask(e) {
 
   const title = document.getElementById('title').value.trim();
   const description = document.getElementById('description').value.trim();
-  const btn = e.target.querySelector('button[type="submit"]');
+  const editId = e.target.dataset.editId;
+  const btn = document.getElementById('btnSubmit');
   btn.disabled = true;
-  btn.textContent = 'Criando...';
 
   try {
-    const res = await fetch(`${API_URL}/tasks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Erro ao criar tarefa');
+    if (editId) {
+      const res = await fetch(`${API_URL}/tasks/${editId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description }),
+      });
+      if (!res.ok) throw new Error('Erro ao atualizar');
+      showToast('Tarefa atualizada!', 'success');
+    } else {
+      const res = await fetch(`${API_URL}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao criar');
+      }
+      showToast('Tarefa criada!', 'success');
     }
 
-    showToast('Tarefa criada com sucesso!', 'success');
-    document.getElementById('taskForm').reset();
+    closeModal();
     loadTasks();
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Criar Tarefa';
   }
 }
 
 async function updateStatus(id, status) {
+  const card = document.querySelector(`.task-card[data-id="${id}"]`);
   try {
     const res = await fetch(`${API_URL}/tasks/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) throw new Error('Erro ao atualizar');
 
-    if (!res.ok) throw new Error('Erro ao atualizar tarefa');
-
-    const statusLabels = { pendente: 'Pendente', em_andamento: 'Em Andamento', concluida: 'Concluída' };
-    showToast(`Tarefa atualizada para "${statusLabels[status]}"!`, 'success');
+    const labels = { pendente: 'Pendente', em_andamento: 'Em Andamento', concluida: 'Concluída' };
+    showToast(`Tarefa movida para "${labels[status]}"`, 'success');
     loadTasks();
   } catch (err) {
     showToast(err.message, 'error');
   }
 }
 
-async function deleteTask(id) {
-  if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+function confirmDelete(id) {
+  deleteTargetId = id;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
 
+async function executeDelete(id) {
   try {
     const res = await fetch(`${API_URL}/tasks/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Erro ao excluir tarefa');
-
+    if (!res.ok) throw new Error('Erro ao excluir');
     showToast('Tarefa excluída!', 'success');
     loadTasks();
   } catch (err) {
@@ -143,12 +235,7 @@ async function deleteTask(id) {
 }
 
 function getStatusLabel(status) {
-  const labels = {
-    pendente: 'Pendente',
-    em_andamento: 'Em Andamento',
-    concluida: 'Concluída',
-  };
-  return labels[status] || status;
+  return { pendente: 'Pendente', em_andamento: 'Em Andamento', concluida: 'Concluída' }[status] || status;
 }
 
 function escapeHtml(text) {
@@ -158,14 +245,21 @@ function escapeHtml(text) {
 }
 
 function showToast(message, type) {
+  const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.textContent = message;
-  document.body.appendChild(toast);
+  toast.className = `toast ${type}`;
+
+  const icons = {
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+  };
+
+  toast.innerHTML = icons[type] || '';
+  toast.appendChild(document.createTextNode(message));
+  container.appendChild(toast);
 
   setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transition = 'opacity 0.3s';
+    toast.classList.add('removing');
     setTimeout(() => toast.remove(), 300);
   }, 3000);
 }

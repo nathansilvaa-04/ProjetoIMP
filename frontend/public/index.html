@@ -3,44 +3,156 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gerenciador de Tarefas</title>
+  <title>TaskFlow</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Gerenciador de Tarefas</h1>
-      <p class="subtitle">Sistema de Gerenciamento de Tarefas</p>
-    </header>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+          <rect x="9" y="3" width="6" height="4" rx="1"/>
+          <path d="M9 14l2 2 4-4"/>
+        </svg>
+        <span>TaskFlow</span>
+      </div>
 
-    <section class="form-section">
-      <h2>Nova Tarefa</h2>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-filter="todas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3h18v18H3z"/>
+            <path d="M3 9h18"/>
+            <path d="M9 21V9"/>
+          </svg>
+          Todas
+          <span class="nav-count" id="countTodas">0</span>
+        </button>
+        <button class="nav-item" data-filter="pendente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+          Pendentes
+          <span class="nav-count" id="countPendente">0</span>
+        </button>
+        <button class="nav-item" data-filter="em_andamento">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+          Em Andamento
+          <span class="nav-count" id="countAndamento">0</span>
+        </button>
+        <button class="nav-item" data-filter="concluida">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+            <path d="M22 4L12 14.01l-3-3"/>
+          </svg>
+          Concluídas
+          <span class="nav-count" id="countConcluida">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-dot online"></div>
+        <span>Sistema Online</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="main-header">
+        <h1>Minhas Tarefas</h1>
+        <button class="btn btn-primary" id="btnNewTask">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nova Tarefa
+        </button>
+      </header>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <span class="stat-value" id="statTotal">0</span>
+          <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-card stat-pendente">
+          <span class="stat-value" id="statPendentes">0</span>
+          <span class="stat-label">Pendentes</span>
+        </div>
+        <div class="stat-card stat-andamento">
+          <span class="stat-value" id="statAndamento">0</span>
+          <span class="stat-label">Em Andamento</span>
+        </div>
+        <div class="stat-card stat-concluida">
+          <span class="stat-value" id="statConcluidas">0</span>
+          <span class="stat-label">Concluídas</span>
+        </div>
+      </div>
+
+      <div class="tasks-container" id="tasksContainer">
+        <div class="loading-skeleton" id="loadingSkeleton">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+        <div class="tasks-list" id="tasksList"></div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Nova Tarefa</h2>
+        <button class="modal-close" id="modalClose">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
       <form id="taskForm">
         <div class="form-group">
           <label for="title">Título</label>
-          <input type="text" id="title" required placeholder="Digite o título da tarefa">
+          <input type="text" id="title" required placeholder="O que precisa ser feito?">
         </div>
         <div class="form-group">
           <label for="description">Descrição</label>
-          <textarea id="description" rows="3" placeholder="Digite a descrição (opcional)"></textarea>
+          <textarea id="description" rows="4" placeholder="Adicione detalhes (opcional)"></textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Criar Tarefa</button>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="btnCancel">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 14.66V20a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h5.34"/>
+              <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/>
+            </svg>
+            Criar Tarefa
+          </button>
+        </div>
       </form>
-    </section>
-
-    <section class="tasks-section">
-      <h2>Lista de Tarefas</h2>
-      <div class="filters">
-        <button class="btn btn-filter active" data-filter="todas">Todas</button>
-        <button class="btn btn-filter" data-filter="pendente">Pendentes</button>
-        <button class="btn btn-filter" data-filter="em_andamento">Em Andamento</button>
-        <button class="btn btn-filter" data-filter="concluida">Concluídas</button>
-      </div>
-      <div id="tasksList" class="tasks-list">
-        <p class="loading">Carregando tarefas...</p>
-      </div>
-    </section>
+    </div>
   </div>
+
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-dialog">
+      <div class="confirm-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+        </svg>
+      </div>
+      <h3>Excluir tarefa?</h3>
+      <p>Esta ação não pode ser desfeita.</p>
+      <div class="confirm-actions">
+        <button class="btn btn-ghost" id="confirmNo">Cancelar</button>
+        <button class="btn btn-danger" id="confirmYes">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer"></div>
 
   <script src="js/app.js"></script>
 </body>
