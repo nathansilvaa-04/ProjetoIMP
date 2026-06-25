@@ -1,0 +1,184 @@
+{
+  "title": "Task Manager - Monitoramento",
+  "uid": "task-manager",
+  "version": 1,
+  "tags": ["task-manager"],
+  "schemaVersion": 27,
+  "panels": [
+    {
+      "title": "Requisições HTTP por Segundo",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[1m])",
+          "legendFormat": "{{method}} {{route}}",
+          "refId": "A"
+        }
+      ],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "short", "label": "Req/s" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Duração das Requisições (P99)",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))",
+          "legendFormat": "{{method}} {{route}}",
+          "refId": "A"
+        }
+      ],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "s", "label": "Latência" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Total de Tarefas Criadas",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(tasks_created_total[1m])",
+          "legendFormat": "Criadas",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(tasks_completed_total[1m])",
+          "legendFormat": "Concluídas",
+          "refId": "B"
+        }
+      ],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "short", "label": "Tarefas/s" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Mensagens RabbitMQ Enviadas",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(rabbitmq_messages_sent_total[1m])",
+          "legendFormat": "Mensagens/s",
+          "refId": "A"
+        }
+      ],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "short", "label": "Msg/s" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Total Acumulado de Tarefas",
+      "type": "singlestat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "tasks_created_total",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [] },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Total de Tarefas Criadas"
+    },
+    {
+      "title": "Total de Tarefas Concluídas",
+      "type": "singlestat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 },
+      "targets": [
+        {
+          "expr": "tasks_completed_total",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [] },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Total de Tarefas Concluídas"
+    },
+    {
+      "title": "Status do Backend",
+      "type": "singlestat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "up{job=\"backend\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            { "type": "value", "value": "1", "text": "Online" },
+            { "type": "value", "value": "0", "text": "Offline" }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "red", "value": 0 },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    }
+  ],
+  "refresh": "5s",
+  "time": { "from": "now-5m", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"] }
+}
