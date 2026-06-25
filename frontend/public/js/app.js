@@ -67,6 +67,8 @@ function closeConfirm() {
   document.getElementById('confirmOverlay').classList.remove('open');
 }
 
+let allTasks = [];
+
 async function loadTasks() {
   const list = document.getElementById('tasksList');
   const skeleton = document.getElementById('loadingSkeleton');
@@ -76,15 +78,16 @@ async function loadTasks() {
   try {
     const res = await fetch(`${API_URL}/tasks`);
     if (!res.ok) throw new Error('Erro ao carregar');
-    let tasks = await res.json();
+    allTasks = await res.json();
 
-    if (currentFilter !== 'todas') {
-      tasks = tasks.filter(t => t.status === currentFilter);
-    }
+    updateStats(allTasks);
+    updateNavCounts(allTasks);
 
-    updateStats(tasks);
-    updateNavCounts(tasks);
-    renderTasks(tasks);
+    const filtered = currentFilter === 'todas'
+      ? allTasks
+      : allTasks.filter(t => t.status === currentFilter);
+
+    renderTasks(filtered);
   } catch (err) {
     list.innerHTML = `<div class="empty-state"><h3>Erro ao carregar</h3><p>${err.message}</p></div>`;
   } finally {
@@ -93,23 +96,21 @@ async function loadTasks() {
 }
 
 function updateStats(tasks) {
-  const all = tasks;
-  const pendentes = all.filter(t => t.status === 'pendente');
-  const andamento = all.filter(t => t.status === 'em_andamento');
-  const concluidas = all.filter(t => t.status === 'concluida');
+  const pendentes = tasks.filter(t => t.status === 'pendente');
+  const andamento = tasks.filter(t => t.status === 'em_andamento');
+  const concluidas = tasks.filter(t => t.status === 'concluida');
 
-  document.getElementById('statTotal').textContent = all.length;
+  document.getElementById('statTotal').textContent = tasks.length;
   document.getElementById('statPendentes').textContent = pendentes.length;
   document.getElementById('statAndamento').textContent = andamento.length;
   document.getElementById('statConcluidas').textContent = concluidas.length;
 }
 
-function updateNavCounts(currentTasks) {
-  const all = currentTasks;
-  document.getElementById('countTodas').textContent = all.length;
-  document.getElementById('countPendente').textContent = all.filter(t => t.status === 'pendente').length;
-  document.getElementById('countAndamento').textContent = all.filter(t => t.status === 'em_andamento').length;
-  document.getElementById('countConcluida').textContent = all.filter(t => t.status === 'concluida').length;
+function updateNavCounts(tasks) {
+  document.getElementById('countTodas').textContent = tasks.length;
+  document.getElementById('countPendente').textContent = tasks.filter(t => t.status === 'pendente').length;
+  document.getElementById('countAndamento').textContent = tasks.filter(t => t.status === 'em_andamento').length;
+  document.getElementById('countConcluida').textContent = tasks.filter(t => t.status === 'concluida').length;
 }
 
 function renderTasks(tasks) {

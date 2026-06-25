@@ -44,7 +44,6 @@ body {
 .sidebar {
   width: 240px;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
   padding: 24px 16px;
   display: flex;
   flex-direction: column;
@@ -53,6 +52,18 @@ body {
   left: 0;
   bottom: 0;
   z-index: 10;
+  overflow-y: auto;
+}
+
+.sidebar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent 0%, var(--accent) 50%, transparent 100%);
+  opacity: 0.3;
 }
 
 .logo {
@@ -132,10 +143,22 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 8px;
-  border-top: 1px solid var(--border);
+  padding: 16px 8px 0;
+  margin-top: 16px;
   font-size: 0.8rem;
   color: var(--text-muted);
+  position: relative;
+}
+
+.sidebar-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -16px;
+  right: -16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.2;
 }
 
 .status-dot {
@@ -232,15 +255,34 @@ body {
 
 .stat-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius);
   padding: 16px 20px;
-  transition: all 0.2s;
+  transition: all 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  padding: 1px;
+  background: linear-gradient(135deg, var(--border), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 .stat-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card:hover::before {
+  background: linear-gradient(135deg, var(--accent), transparent 60%);
 }
 
 .stat-value {
@@ -297,11 +339,26 @@ body {
 
 .task-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius);
   padding: 16px 20px;
   transition: all 0.25s;
   animation: fadeInUp 0.3s ease;
+  position: relative;
+}
+
+.task-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  padding: 1px;
+  background: linear-gradient(135deg, var(--border), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  transition: all 0.3s;
 }
 
 @keyframes fadeInUp {
@@ -310,8 +367,12 @@ body {
 }
 
 .task-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 0 20px rgba(124, 92, 252, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.task-card:hover::before {
+  background: linear-gradient(135deg, var(--accent), transparent 60%);
 }
 
 .task-card.concluida {
