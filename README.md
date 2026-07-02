@@ -172,3 +172,128 @@ docker compose down -v
   "status": "pendente" | "em_andamento" | "concluida"
 }
 ```
+
+---
+
+## 📊 Monitoramento — Prometheus
+
+O Prometheus coleta métricas do backend a cada 15 segundos automaticamente.
+
+**Acesso:**
+
+```
+http://localhost:9091
+```
+
+**Verificar se o backend está sendo monitorado:**
+
+```promql
+up
+```
+
+Resultado esperado:
+
+```
+up{job="backend"} = 1
+up{job="prometheus"} = 1
+```
+
+Valor `1` = online. Valor `0` = offline ou inacessível.
+
+**Principais consultas (PromQL):**
+
+| Query | O que mostra |
+|---|---|
+| `up` | Status de todos os serviços monitorados |
+| `up{job="backend"}` | Status específico do backend |
+| `http_requests_total` | Total acumulado de requisições HTTP por rota/método/status |
+| `rate(http_requests_total[1m])` | Requisições por segundo (último 1 minuto) |
+| `tasks_created_total` | Total de tarefas criadas |
+| `tasks_completed_total` | Total de tarefas concluídas |
+| `rabbitmq_messages_sent_total` | Total de mensagens enviadas ao RabbitMQ |
+| `histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))` | Latência no percentil 99 |
+
+**Como testar:**
+
+1. Acesse `http://localhost:8081` e crie ou atualize tarefas
+2. Abra `http://localhost:9091`
+3. Digite uma query no campo de expressão e clique em **Execute**
+4. Alterne entre as abas **Table** (valores instantâneos) e **Graph** (evolução no tempo)
+
+---
+
+## 📈 Dashboard — Grafana
+
+O Grafana já sobe pré-configurado com o Prometheus como fonte de dados e com o dashboard **Task Manager - Monitoramento** provisionado automaticamente.
+
+**Acesso:**
+
+```
+http://localhost:3001
+```
+
+**Credenciais:** `admin` / `admin`
+
+**Como acessar o dashboard:**
+
+1. Faça login com `admin` / `admin`
+2. No menu lateral, clique em **Dashboards**
+3. Abra **Task Manager - Monitoramento**
+
+**O que o dashboard exibe:**
+
+| Painel | Métrica |
+|---|---|
+| Requisições HTTP por segundo | `rate(http_requests_total[1m])` |
+| Duração das requisições (P99) | `histogram_quantile(0.99, ...)` |
+| Taxa de tarefas criadas e concluídas | `rate(tasks_created_total[1m])` |
+| Mensagens RabbitMQ por segundo | `rate(rabbitmq_messages_sent_total[1m])` |
+| Total acumulado de tarefas criadas | `tasks_created_total` |
+| Total acumulado de tarefas concluídas | `tasks_completed_total` |
+| Status do backend | `up{job="backend"}` → Online / Offline |
+
+O dashboard atualiza automaticamente a cada **5 segundos**.
+
+**Como testar:**
+
+1. Deixe o dashboard aberto
+2. Acesse `http://localhost:8081` e crie, atualize e conclua tarefas
+3. Observe os gráficos sendo atualizados em tempo real
+
+---
+
+## 🐰 Mensageria — RabbitMQ
+
+A cada criação ou atualização de tarefa, o backend publica uma mensagem na fila `task_notifications`. O próprio backend também consome essa fila como assinante.
+
+**Acesso ao painel de gerenciamento:**
+
+```
+http://localhost:15672
+```
+
+**Credenciais:** `guest` / `guest`
+
+**Como verificar o fluxo de mensagens:**
+
+1. Faça login no painel com `guest` / `guest`
+2. Clique na aba **Queues and Streams**
+3. Clique na fila **task_notifications**
+4. Observe as colunas:
+   - **Ready** — mensagens aguardando consumo
+   - **Unacked** — mensagens em processamento
+   - **Message rates** — fluxo em tempo real
+
+**Como testar:**
+
+1. Acesse `http://localhost:8081` e crie uma tarefa
+2. Volte ao painel do RabbitMQ
+3. Na seção **Message rates** da fila `task_notifications`, será exibido um pico momentâneo indicando a mensagem publicada e consumida
+4. No terminal onde o `docker compose` está rodando, você também verá os logs do consumidor:
+
+```
+task-manager-backend | Notificação enviada: task_created - Tarefa #1
+task-manager-backend | [Consumer] Evento recebido: task_created - Tarefa: Minha tarefa
+```
+
+A aba **Connections** mostra a conexão ativa do backend com o RabbitMQ, e a aba **Overview** exibe o estado geral do broker.
