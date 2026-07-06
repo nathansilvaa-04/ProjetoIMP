@@ -75,9 +75,14 @@ ProjetoIMP/
 - **Notificações assíncronas** via RabbitMQ a cada criação ou atualização de tarefa
 - **Métricas de observabilidade** expostas em `/metrics` (Prometheus):
   - Total de requisições HTTP por método, rota e status
-  - Duração das requisições HTTP
-  - Total de tarefas criadas e concluídas
-  - Total de mensagens enviadas ao RabbitMQ
+  - Total de erros HTTP (4xx/5xx) por rota
+  - Duração das requisições HTTP (P50, P95, P99)
+  - Duração das queries ao banco de dados por operação
+  - Total de tarefas criadas, concluídas, atualizadas e deletadas
+  - Número atual de tarefas ativas (não concluídas)
+  - Número de tarefas por status em tempo real
+  - Total de mensagens enviadas ao RabbitMQ e erros de envio
+  - Métricas de processo Node.js: CPU, memória RAM/heap, event loop lag, GC, file descriptors
 - **Dashboard Grafana** pré-configurado com provisioning automático
 - **Health check** disponível em `/health`
 
@@ -208,10 +213,21 @@ Valor `1` = online. Valor `0` = offline ou inacessível.
 | `up{job="backend"}` | Status específico do backend |
 | `http_requests_total` | Total acumulado de requisições HTTP por rota/método/status |
 | `rate(http_requests_total[1m])` | Requisições por segundo (último 1 minuto) |
+| `rate(http_errors_total[1m])` | Erros HTTP 4xx/5xx por segundo |
 | `tasks_created_total` | Total de tarefas criadas |
 | `tasks_completed_total` | Total de tarefas concluídas |
+| `tasks_updated_total` | Total de tarefas atualizadas |
+| `tasks_deleted_total` | Total de tarefas deletadas |
+| `tasks_active_total` | Número atual de tarefas não concluídas |
+| `tasks_by_status{status="pendente"}` | Tarefas pendentes no momento |
 | `rabbitmq_messages_sent_total` | Total de mensagens enviadas ao RabbitMQ |
+| `rabbitmq_errors_total` | Total de erros ao publicar no RabbitMQ |
 | `histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))` | Latência no percentil 99 |
+| `histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[1m]))` | Duração das queries ao banco (P95) |
+| `process_resident_memory_bytes` | Memória RAM usada pelo backend |
+| `nodejs_heap_size_used_bytes` | Heap JavaScript utilizado |
+| `rate(process_cpu_seconds_total[1m])` | Uso de CPU do processo |
+| `nodejs_eventloop_lag_seconds` | Lag do event loop Node.js |
 
 **Como testar:**
 
@@ -240,17 +256,32 @@ http://localhost:3001
 2. No menu lateral, clique em **Dashboards**
 3. Abra **Task Manager - Monitoramento**
 
-**O que o dashboard exibe:**
+**O que o dashboard exibe (22 painéis):**
 
-| Painel | Métrica |
-|---|---|
-| Requisições HTTP por segundo | `rate(http_requests_total[1m])` |
-| Duração das requisições (P99) | `histogram_quantile(0.99, ...)` |
-| Taxa de tarefas criadas e concluídas | `rate(tasks_created_total[1m])` |
-| Mensagens RabbitMQ por segundo | `rate(rabbitmq_messages_sent_total[1m])` |
-| Total acumulado de tarefas criadas | `tasks_created_total` |
-| Total acumulado de tarefas concluídas | `tasks_completed_total` |
-| Status do backend | `up{job="backend"}` → Online / Offline |
+| Painel | Tipo | Métrica |
+|---|---|---|
+| Status do Backend | stat | `up{job="backend"}` → Online / Offline |
+| Tarefas Criadas (total) | stat | `tasks_created_total` |
+| Tarefas Concluídas (total) | stat | `tasks_completed_total` |
+| Tarefas Deletadas (total) | stat | `tasks_deleted_total` |
+| Tarefas Atualizadas (total) | stat | `tasks_updated_total` |
+| Tarefas Ativas (não concluídas) | stat | `tasks_active_total` |
+| Tarefas por Status atual | bargauge | `tasks_by_status{status=...}` |
+| Taxa de criação/conclusão/deleção/atualização | graph | `rate(tasks_*_total[1m])` |
+| Requisições HTTP por segundo | graph | `rate(http_requests_total[1m])` |
+| Erros HTTP 4xx/5xx por segundo | graph | `rate(http_errors_total[1m])` |
+| Latência P50 / P95 / P99 | graph | `histogram_quantile(0.50/0.95/0.99, ...)` |
+| Duração das queries ao banco (P95) | graph | `histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[1m]))` |
+| Mensagens RabbitMQ + erros por segundo | graph | `rate(rabbitmq_messages_sent_total[1m])` |
+| Memória RAM do processo (RSS + heap) | graph | `process_resident_memory_bytes` |
+| CPU do processo | graph | `rate(process_cpu_seconds_total[1m])` |
+| Event Loop Lag | graph | `nodejs_eventloop_lag_seconds` |
+| Handles e Requests ativos | graph | `nodejs_active_handles_total` |
+| Garbage Collector — duração | graph | `rate(nodejs_gc_duration_seconds_sum[1m])` |
+| File Descriptors abertos | stat | `process_open_fds` |
+| Uptime do processo | stat | `process_start_time_seconds` |
+| Total mensagens RabbitMQ | stat | `rabbitmq_messages_sent_total` |
+| Total erros RabbitMQ | stat | `rabbitmq_errors_total` |
 
 O dashboard atualiza automaticamente a cada **5 segundos**.
 
