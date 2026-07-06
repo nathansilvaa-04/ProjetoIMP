@@ -1,184 +1,183 @@
 {
   "title": "Task Manager - Monitoramento",
   "uid": "task-manager",
-  "version": 1,
+  "version": 2,
   "tags": ["task-manager"],
   "schemaVersion": 27,
   "panels": [
-    {
-      "title": "Requisições HTTP por Segundo",
-      "type": "graph",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+
+    { "id": 1, "title": "🟢 Status do Backend", "type": "stat", "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [{ "expr": "up{job=\"backend\"}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "mappings": [
+        { "type": "value", "value": "1", "text": "Online" },
+        { "type": "value", "value": "0", "text": "Offline" }
+      ], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }, "unit": "none" } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+
+    { "id": 2, "title": "📋 Tarefas Criadas (total)", "type": "stat", "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [{ "expr": "tasks_created_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }, "unit": "none" } },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+
+    { "id": 3, "title": "✅ Tarefas Concluídas (total)", "type": "stat", "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [{ "expr": "tasks_completed_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "none" } },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+
+    { "id": 4, "title": "🗑️ Tarefas Deletadas (total)", "type": "stat", "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [{ "expr": "tasks_deleted_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }] }, "unit": "none" } },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+
+    { "id": 5, "title": "✏️ Tarefas Atualizadas (total)", "type": "stat", "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "targets": [{ "expr": "tasks_updated_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] }, "unit": "none" } },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+
+    { "id": 6, "title": "⏳ Tarefas Ativas (não concluídas)", "type": "stat", "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "targets": [{ "expr": "tasks_active_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "yellow", "value": null }, { "color": "red", "value": 20 }] }, "unit": "none" } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+
+    { "id": 7, "title": "📊 Tarefas por Status (atual)", "type": "bargauge", "gridPos": { "h": 6, "w": 8, "x": 0, "y": 4 },
       "targets": [
-        {
-          "expr": "rate(http_requests_total[1m])",
-          "legendFormat": "{{method}} {{route}}",
-          "refId": "A"
-        }
+        { "expr": "tasks_by_status{status=\"pendente\"}", "legendFormat": "Pendente", "refId": "A" },
+        { "expr": "tasks_by_status{status=\"em_andamento\"}", "legendFormat": "Em Andamento", "refId": "B" },
+        { "expr": "tasks_by_status{status=\"concluida\"}", "legendFormat": "Concluída", "refId": "C" }
+      ],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "none" } },
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] }, "displayMode": "gradient" }
+    },
+
+    { "id": 8, "title": "🔁 Taxa de Criação vs Conclusão (req/s)", "type": "graph", "gridPos": { "h": 6, "w": 16, "x": 8, "y": 4 },
+      "targets": [
+        { "expr": "rate(tasks_created_total[1m])", "legendFormat": "Criadas/s", "refId": "A" },
+        { "expr": "rate(tasks_completed_total[1m])", "legendFormat": "Concluídas/s", "refId": "B" },
+        { "expr": "rate(tasks_deleted_total[1m])", "legendFormat": "Deletadas/s", "refId": "C" },
+        { "expr": "rate(tasks_updated_total[1m])", "legendFormat": "Atualizadas/s", "refId": "D" }
       ],
       "legend": { "show": true },
       "xaxis": { "mode": "time" },
-      "yaxes": [
-        { "format": "short", "label": "Req/s" },
-        { "format": "short" }
-      ]
+      "yaxes": [{ "format": "short", "label": "ops/s" }, { "format": "short" }]
     },
-    {
-      "title": "Duração das Requisições (P99)",
-      "type": "graph",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+
+    { "id": 9, "title": "🌐 Requisições HTTP por Segundo", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "targets": [{ "expr": "rate(http_requests_total[1m])", "legendFormat": "{{method}} {{route}}", "refId": "A" }],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [{ "format": "short", "label": "Req/s" }, { "format": "short" }]
+    },
+
+    { "id": 10, "title": "❌ Erros HTTP (4xx/5xx) por Segundo", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "targets": [{ "expr": "rate(http_errors_total[1m])", "legendFormat": "{{method}} {{route}} {{status}}", "refId": "A" }],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [{ "format": "short", "label": "Erros/s" }, { "format": "short" }]
+    },
+
+    { "id": 11, "title": "⚡ Latência P50 / P95 / P99 (segundos)", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
       "targets": [
-        {
-          "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))",
-          "legendFormat": "{{method}} {{route}}",
-          "refId": "A"
-        }
+        { "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[1m]))", "legendFormat": "P50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[1m]))", "legendFormat": "P95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))", "legendFormat": "P99", "refId": "C" }
       ],
       "legend": { "show": true },
       "xaxis": { "mode": "time" },
-      "yaxes": [
-        { "format": "s", "label": "Latência" },
-        { "format": "short" }
-      ]
+      "yaxes": [{ "format": "s", "label": "Latência" }, { "format": "short" }]
     },
-    {
-      "title": "Total de Tarefas Criadas",
-      "type": "graph",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+
+    { "id": 12, "title": "🗄️ Duração das Queries ao Banco (P95)", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "targets": [{ "expr": "histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[1m]))", "legendFormat": "{{operation}}", "refId": "A" }],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [{ "format": "s", "label": "Duração" }, { "format": "short" }]
+    },
+
+    { "id": 13, "title": "🐰 Mensagens RabbitMQ por Segundo", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
       "targets": [
-        {
-          "expr": "rate(tasks_created_total[1m])",
-          "legendFormat": "Criadas",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(tasks_completed_total[1m])",
-          "legendFormat": "Concluídas",
-          "refId": "B"
-        }
+        { "expr": "rate(rabbitmq_messages_sent_total[1m])", "legendFormat": "Enviadas/s", "refId": "A" },
+        { "expr": "rate(rabbitmq_errors_total[1m])", "legendFormat": "Erros/s", "refId": "B" }
       ],
       "legend": { "show": true },
       "xaxis": { "mode": "time" },
-      "yaxes": [
-        { "format": "short", "label": "Tarefas/s" },
-        { "format": "short" }
-      ]
+      "yaxes": [{ "format": "short", "label": "Msg/s" }, { "format": "short" }]
     },
-    {
-      "title": "Mensagens RabbitMQ Enviadas",
-      "type": "graph",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+
+    { "id": 14, "title": "💾 Memória RAM do Processo (bytes)", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
       "targets": [
-        {
-          "expr": "rate(rabbitmq_messages_sent_total[1m])",
-          "legendFormat": "Mensagens/s",
-          "refId": "A"
-        }
+        { "expr": "process_resident_memory_bytes", "legendFormat": "RSS (Resident)", "refId": "A" },
+        { "expr": "nodejs_heap_size_used_bytes", "legendFormat": "Heap Usado", "refId": "B" },
+        { "expr": "nodejs_heap_size_total_bytes", "legendFormat": "Heap Total", "refId": "C" }
       ],
       "legend": { "show": true },
       "xaxis": { "mode": "time" },
-      "yaxes": [
-        { "format": "short", "label": "Msg/s" },
-        { "format": "short" }
-      ]
+      "yaxes": [{ "format": "bytes", "label": "Memória" }, { "format": "short" }]
     },
-    {
-      "title": "Total Acumulado de Tarefas",
-      "type": "singlestat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
-      "targets": [
-        {
-          "expr": "tasks_created_total",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "fixed" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [] },
-          "unit": "none"
-        }
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "title": "Total de Tarefas Criadas"
+
+    { "id": 15, "title": "🖥️ CPU do Processo (segundos acumulados)", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
+      "targets": [{ "expr": "rate(process_cpu_seconds_total[1m])", "legendFormat": "CPU uso/s", "refId": "A" }],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [{ "format": "short", "label": "CPU/s" }, { "format": "short" }]
     },
-    {
-      "title": "Total de Tarefas Concluídas",
-      "type": "singlestat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 },
-      "targets": [
-        {
-          "expr": "tasks_completed_total",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "fixed" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [] },
-          "unit": "none"
-        }
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "title": "Total de Tarefas Concluídas"
+
+    { "id": 16, "title": "🔄 Event Loop Lag (Node.js)", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+      "targets": [{ "expr": "nodejs_eventloop_lag_seconds", "legendFormat": "Event Loop Lag", "refId": "A" }],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [{ "format": "s", "label": "Lag" }, { "format": "short" }]
     },
-    {
-      "title": "Status do Backend",
-      "type": "singlestat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 16 },
+
+    { "id": 17, "title": "🔌 Handles e Requests Ativos (Node.js)", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 42 },
       "targets": [
-        {
-          "expr": "up{job=\"backend\"}",
-          "refId": "A"
-        }
+        { "expr": "nodejs_active_handles_total", "legendFormat": "Handles ativos", "refId": "A" },
+        { "expr": "nodejs_active_requests_total", "legendFormat": "Requests ativos", "refId": "B" }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            { "type": "value", "value": "1", "text": "Online" },
-            { "type": "value", "value": "0", "text": "Offline" }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "red", "value": 0 },
-              { "color": "green", "value": 1 }
-            ]
-          },
-          "unit": "none"
-        }
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      }
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [{ "format": "short", "label": "Count" }, { "format": "short" }]
+    },
+
+    { "id": 18, "title": "🗑️ Garbage Collector — Duração (Node.js)", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 42 },
+      "targets": [{ "expr": "rate(nodejs_gc_duration_seconds_sum[1m])", "legendFormat": "{{kind}}", "refId": "A" }],
+      "legend": { "show": true },
+      "xaxis": { "mode": "time" },
+      "yaxes": [{ "format": "s", "label": "Duração GC/s" }, { "format": "short" }]
+    },
+
+    { "id": 19, "title": "📁 File Descriptors Abertos", "type": "stat", "gridPos": { "h": 4, "w": 6, "x": 0, "y": 50 },
+      "targets": [{ "expr": "process_open_fds", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 100 }, { "color": "red", "value": 500 }] }, "unit": "none" } },
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+
+    { "id": 20, "title": "⏱️ Uptime do Processo (segundos)", "type": "stat", "gridPos": { "h": 4, "w": 6, "x": 6, "y": 50 },
+      "targets": [{ "expr": "process_start_time_seconds", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "dateTimeAsIso" } },
+      "options": { "colorMode": "value", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+
+    { "id": 21, "title": "📦 Total de Mensagens RabbitMQ Enviadas", "type": "stat", "gridPos": { "h": 4, "w": 6, "x": 12, "y": 50 },
+      "targets": [{ "expr": "rabbitmq_messages_sent_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }, "unit": "none" } },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+
+    { "id": 22, "title": "🚨 Total de Erros RabbitMQ", "type": "stat", "gridPos": { "h": 4, "w": 6, "x": 18, "y": 50 },
+      "targets": [{ "expr": "rabbitmq_errors_total", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }, "unit": "none" } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
     }
+
   ],
   "refresh": "5s",
-  "time": { "from": "now-5m", "to": "now" },
+  "time": { "from": "now-15m", "to": "now" },
   "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"] }
 }
+

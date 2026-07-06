@@ -1,5 +1,5 @@
 const amqp = require('amqplib');
-const { rabbitmqMessagesSent } = require('../metrics');
+const { rabbitmqMessagesSent, rabbitmqErrors } = require('../metrics');
 
 let channel;
 const QUEUE = 'task_notifications';
@@ -23,9 +23,14 @@ async function publishTaskNotification(event, task) {
     timestamp: new Date().toISOString(),
   });
 
-  channel.sendToQueue(QUEUE, Buffer.from(message), { persistent: true });
-  rabbitmqMessagesSent.inc();
-  console.log(`Notificação enviada: ${event} - Tarefa #${task.id}`);
+  try {
+    channel.sendToQueue(QUEUE, Buffer.from(message), { persistent: true });
+    rabbitmqMessagesSent.inc();
+    console.log(`Notificação enviada: ${event} - Tarefa #${task.id}`);
+  } catch (err) {
+    rabbitmqErrors.inc();
+    console.error(`Erro ao enviar notificação: ${err.message}`);
+  }
 }
 
 async function startConsumer() {
